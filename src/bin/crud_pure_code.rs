@@ -52,13 +52,15 @@ where
     async fn save(&self, item: &T) -> ResultErr<String> {
 
         let id = uuid::Uuid::new_v4().to_string();
-        let mut guard: MutexGuard<HashMap<String, Entity<T>>> = self.datas.lock().await;
 
-        guard.insert(id.clone(), Entity {
+        let entity = Entity {
             data: item.clone(),
             identifiant: id.clone(),
             version: 1
-        });
+        };
+
+        let mut guard: MutexGuard<HashMap<String, Entity<T>>> = self.datas.lock().await;
+        guard.insert(id.clone(), entity);
 
         Ok(id)
     }
