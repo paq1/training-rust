@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use futures::lock::Mutex;
 use std::collections::HashMap;
 use std::sync::Arc;
+use futures::FutureExt;
 use uuid::Uuid;
 
 pub type ResultErr<DATA> = Result<DATA, TrainingError>;
@@ -19,8 +20,9 @@ pub struct Entity<T> {
 }
 
 #[async_trait]
-pub trait Dao<T> {
+pub trait Dao<T>: Send + Sync {
     async fn get_by_id(&self, id: &str) -> ResultErr<Option<Entity<T>>>;
+    async fn get_all(&self) -> ResultErr<Vec<Entity<T>>>;
 
     async fn save(&self, item: &T) -> ResultErr<String>;
 
@@ -48,6 +50,12 @@ where
         let mut guard = self.datas.lock().await;
         let c = guard.get(id);
         c.map(|e| Ok(Some(e.clone()))).unwrap_or(Ok(None))
+    }
+
+    async fn get_all(&self) -> ResultErr<Vec<Entity<T>>> {
+        let guard = self.datas.lock().await;
+        let entities = guard.iter().map(|(_, entity)| entity.clone()).collect::<Vec<_>>();
+        Ok(entities)
     }
 
     async fn save(&self, item: &T) -> ResultErr<String> {
@@ -95,8 +103,19 @@ async fn main() -> ResultErr<()> {
     let stored_entity = dao.get_by_id(id.as_str()).await?;
     println!("entity : {stored_entity:?}");
 
-    change_something(dao.clone()).await?;
-    change_something(dao).await?;
+    let dao_th1 = dao.clone();
+    let th1 = tokio::spawn(async move {
+        println!("xxxxxxxxxxxxxxxxxxxxxx");
+        let x = change_something(dao_th1).await;
+        x
+    });
 
+    change_something(dao.clone()).await?;
+    change_something(dao.clone()).await?;
+
+    let x= th1.await.unwrap()?;
+
+    let all = dao.get_all().await?;
+    println!("[{}]all: {all:?}", all.len());
     Ok(())
 }
