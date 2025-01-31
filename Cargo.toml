@@ -2,6 +2,13 @@
 name = "training-rust"
 version = "0.1.0"
 edition = "2021"
+default-run = "training-rust"
 
 [dependencies]
-rand = "0.8.5"
+#rand = "0.8.5"
+futures = "0.3.30"
+async-trait = "0.1.80"
+#chrono = { version = "0.4.38", features = ["serde"] }
+#serde = { version = "1.0.203", features = ["derive"] }
+tokio = { version = "1.42.0", features = ["rt", "rt-multi-thread", "macros"] }
+uuid = { version = "1.12.1", features = ["v4", "fast-rng"] }
